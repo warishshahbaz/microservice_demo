@@ -63,6 +63,140 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/a
 
 ### Deployment
 
+###### consumer webpack.config.js
+const path = require("path");
+const { ModuleFederationPlugin } = require("webpack").container;
+const HtmlWebpackPlugin = require("html-webpack-plugin");
+
+module.exports = {
+  entry: "./src/index",
+  mode: "development",
+  devServer: {
+    static: {
+      directory: path.join(__dirname, "dist"), // Use `static` instead of `contentBase`
+    },
+    port: 3000, // Port for the host app
+    historyApiFallback: true, // Enables support for React Router (SPA)
+  },
+
+  resolve: {
+    extensions: [".js", ".jsx"],
+  },
+  module: {
+    rules: [
+      {
+        test: /\.jsx?$/,
+        exclude: /node_modules/,
+        use: {
+          loader: "babel-loader",
+          options: {
+            presets: ["@babel/preset-env", "@babel/preset-react"],
+            plugins: ["@babel/plugin-syntax-jsx"],
+          },
+        },
+      },
+      {
+        test: /\.css$/, // Process CSS files
+        use: [
+          "style-loader", // Injects styles into the DOM
+          "css-loader", // Interprets `@import` and `url()` like `import/require()` and will resolve them
+        ],
+      },
+    ],
+  },
+  plugins: [
+    new ModuleFederationPlugin({
+      name: "hostApp",
+      remotes: {
+        remoteApp: "remoteApp@http://localhost:3001/remoteEntry.js", // Verify URL and module name
+      },
+      shared: {
+        react: { singleton: true, eager: true },
+        "react-dom": { singleton: true, eager: true },
+      },
+    }),
+    new HtmlWebpackPlugin({
+      template: "./public/index.html", // Path to your template file
+    }),
+  ],
+};
+########### consumer webpack.config.js
+
+const path = require("path");
+const { ModuleFederationPlugin } = require("webpack").container;
+const HtmlWebPackPlugin = require("html-webpack-plugin");
+const webpack = require("webpack");
+
+module.exports = {
+  entry: "./src/index",
+  mode: "development",
+  devServer: {
+    hot: true,
+    port: 3001,
+    historyApiFallback: true,
+    client: {
+      overlay: {
+        runtimeErrors: (error) => {
+          if (
+            error?.message ===
+            "ResizeObserver loop completed with undelivered notifications."
+          ) {
+            console.error(error);
+            return false;
+          }
+          return true;
+        },
+      },
+    },
+  },
+  output: {
+    publicPath: "http://localhost:3001/",
+  },
+  resolve: {
+    extensions: [".js", ".jsx"],
+  },
+  module: {
+    rules: [
+      {
+        test: /\.jsx?$/,
+        exclude: /node_modules/,
+        use: {
+          loader: "babel-loader",
+          options: {
+            presets: ["@babel/preset-env", "@babel/preset-react"],
+            plugins: ["@babel/plugin-syntax-jsx"],
+          },
+        },
+      },
+      {
+        test: /\.css$/, // Process CSS files
+        use: [
+          "style-loader", // Injects styles into the DOM
+          "css-loader", // Interprets `@import` and `url()` like `import/require()` and will resolve them
+        ],
+      },
+    ],
+  },
+  plugins: [
+    new webpack.HotModuleReplacementPlugin(),
+    new ModuleFederationPlugin({
+      name: "remoteApp",
+      filename: "remoteEntry.js",
+      exposes: {
+        "./App": "./src/App.js",
+        "./Button": "./src/components/Button.js", // Exposing a Button component
+      },
+      shared: {
+        react: { singleton: true, eager: true },
+        "react-dom": { singleton: true, eager: true },
+      },
+    }),
+    new HtmlWebPackPlugin({
+      template: "./public/index.html",
+    }),
+  ],
+};
+
 This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
 
 ### `npm run build` fails to minify
